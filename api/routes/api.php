@@ -1,0 +1,37 @@
+<?php
+
+use App\Models\Product;
+use App\Http\Controllers\Api\{
+    ClientController,
+    DebtRecordController,
+    ExpenseController,
+    PaymentController,
+    ProductController,
+    ProfitController,
+};
+use App\Http\Controllers\AuthController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/ping', fn() => response()->json(['pong' => true, 'time' => now()->toISOString()]));
+
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login');;
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
+
+    Route::apiResource('clients', ClientController::class)->only(['index','store','update','destroy']);
+    Route::apiResource('expenses', ExpenseController::class)->only(['index','store','update','destroy']);
+
+    Route::apiResource('payments', PaymentController::class)->only(['index','store','destroy']);
+    Route::apiResource('debts', DebtRecordController::class)->only(['index','store','destroy']);
+
+    Route::apiResource('products', ProductController::class)->only(['index','store','update','destroy']);
+    Route::post('products/{product}/stock', [ProductController::class, 'addStock']);
+    Route::post('products/{product}/sale', [ProductController::class, 'recordSale']);
+    Route::get('products/{product}/stock-entries', fn(Product $p) => response()->json($p->stockEntries()->latest()->get()));
+    Route::get('products/{product}/sales', fn(Product $p) => response()->json($p->sales()->latest()->get()));
+
+    Route::apiResource('profits', ProfitController::class)->only(['index','store','update','destroy']);
+});
