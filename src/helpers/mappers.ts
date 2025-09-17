@@ -14,14 +14,38 @@ const monthString = (d: Date) =>
 // mappingni kelishib oling (0..5)
 const expenseCategoryFromNumber = (n: number): ExpenseCategory => {
     switch (n) {
-        case 0: return 'rent';
-        case 1: return 'internet';
-        case 2: return 'electricity';
-        case 3: return 'tax';
-        case 4: return 'salary';
+        case 1: return 'rent';
+        case 2: return 'internet';
+        case 3: return 'electricity';
+        case 4: return 'tax';
+        case 5: return 'salary';
+        case 6: return 'personal';
         default: return 'personal';
     }
 };
+
+export const expenseCategoryToNumber = (c: ExpenseCategory): number => {
+    switch (c) {
+        case 'rent':        return 1;
+        case 'internet':    return 2;
+        case 'electricity': return 3;
+        case 'tax':         return 4;
+        case 'salary':      return 5;
+        case 'personal':    return 6;
+    }
+};
+
+export const toExpensePayload = (e: {
+    category: ExpenseCategory;
+    amount: number;
+    description: string;
+    date: string; // 'YYYY-MM-DD'
+}) => ({
+    category: expenseCategoryToNumber(e.category),
+    amount: e.amount,
+    description: e.description || null,
+    date: e.date,
+});
 
 export const toClient = (c: ClientApi): Client => ({
     id: c.id,
@@ -107,14 +131,12 @@ export const toSale = (s: SaleApi): Sale => {
 
 export const toMonthlyProfit = (m: MonthlyProfitApi): MonthlyProfit => ({
     id: m.id,
-    month: String(m.month).length === 6
-        ? `${String(m.month).slice(0,4)}-${String(m.month).slice(4)}`
-        : String(m.month), // ehtiyot chorasi
+    month: String(m.month).padStart(2, '0'),
     totalRevenue: Number(m.total_revenue),
     totalExpenses: Number(m.total_expenses),
     totalDebtsAdded: Number(m.total_debts_added),
     debtPayments: Number(m.debt_payments),
-    productProfit: m.product_profit ?? undefined,
+    productProfit: m.product_profit ?? 0,
     netProfit: Number(m.net_profit),
     createdAt: new Date(m.created_at),
 });

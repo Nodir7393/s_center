@@ -30,8 +30,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('products', ProductController::class)->only(['index','store','update','destroy']);
     Route::post('products/{product}/stock', [ProductController::class, 'addStock']);
     Route::post('products/{product}/sale', [ProductController::class, 'recordSale']);
-    Route::get('products/{product}/stock-entries', fn(Product $p) => response()->json($p->stockEntries()->latest()->get()));
-    Route::get('products/{product}/sales', fn(Product $p) => response()->json($p->sales()->latest()->get()));
+    Route::get('products/{product}/stock-entries', [ProductController::class, 'stockEntries']);
+    Route::get('products/{product}/sales', [ProductController::class, 'sales']);
 
     Route::apiResource('profits', ProfitController::class)->only(['index','store','update','destroy']);
 });

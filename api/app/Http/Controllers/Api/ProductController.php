@@ -12,17 +12,19 @@ class ProductController extends Controller
 {
     public function __construct(private ProductService $service) {}
 
-    public function index()  { return $this->service->all()->map(fn(Product $p) => [
-        'id'             => (string)$p->id, // front string sifatida ishlatyapti
-        'name'           => $p->name,
-        'category'       => $p->category,   // int bo‘lsa ham frontda mapping qilib ko‘rsatadi yoki label yuborish ham mumkin
-        'purchase_price' => $p->purchase_price,
-        'sale_price'     => $p->sale_price,
-        'stock_quantity' => $p->stock_quantity,
-        'min_quantity'   => $p->min_quantity,
-        'created_at'     => $p->created_at?->toISOString(),
-        'updated_at'     => $p->updated_at?->toISOString(),
-    ]); }
+    public function index()  {
+        return $this->service->all()->map(fn(Product $p) => [
+            'id'             => (string)$p->id, // front string sifatida ishlatyapti
+            'name'           => $p->name,
+            'category'       => $p->category,   // int bo‘lsa ham frontda mapping qilib ko‘rsatadi yoki label yuborish ham mumkin
+            'purchase_price' => $p->purchase_price,
+            'sale_price'     => $p->sale_price,
+            'stock_quantity' => $p->stock_quantity,
+            'min_quantity'   => $p->min_quantity,
+            'created_at'     => $p->created_at?->toISOString(),
+            'updated_at'     => $p->updated_at?->toISOString(),
+        ]);
+    }
 
     public function store(Request $r)
     {
@@ -108,5 +110,49 @@ class ProductController extends Controller
             ],
             'product' => $product->fresh(),
         ], 201);
+    }
+
+    public function sales(Request $r, Product $product)
+    {
+        $perPage = (int) $r->input('per_page', 50);
+
+        $query = $product->sales()->orderByDesc('created_at');
+
+        $mapFn = fn($s) => [
+            'id'          => (string) $s->id,
+            'product_id'  => (string) $s->product_id,
+            'quantity'    => (int)    $s->quantity,
+            'unit_price'  => (float)  $s->unit_price,
+            'description' => $s->description,
+            'created_at'  => $s->created_at?->toISOString(),
+        ];
+
+        if ($perPage > 0) {
+            return $query->paginate($perPage)->through($mapFn);
+        }
+
+        return $query->get()->map($mapFn);
+    }
+
+    public function stockEntries(Request $r, Product $product)
+    {
+        $perPage = (int) $r->input('per_page', 50);
+
+        $query = $product->stockEntries()->orderByDesc('created_at');
+
+        $mapFn = fn($e) => [
+            'id'          => (string) $e->id,
+            'product_id'  => (string) $e->product_id,
+            'quantity'    => (int)    $e->quantity,
+            'unit_price'  => (float)  $e->unit_price,
+            'description' => $e->description,
+            'created_at'  => $e->created_at?->toISOString(),
+        ];
+
+        if ($perPage > 0) {
+            return $query->paginate($perPage)->through($mapFn);
+        }
+
+        return $query->get()->map($mapFn);
     }
 }

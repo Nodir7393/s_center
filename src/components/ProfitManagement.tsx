@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, TrendingUp, Calendar, Edit, Trash2, Filter, History, Calculator } from 'lucide-react';
-import { MonthlyProfit, Client, Expense, DebtRecord, Payment, Product, Sale } from '../types';
+import { MonthlyProfit, Client, Expense, DebtRecord, Payment, Product, Sale } from '../types/app-types';
+import {toClient, toDebtRecord, toExpense, toMonthlyProfit, toPayment, toProduct} from '../helpers/mappers';
 import { apiService } from '../services/api';
 import { 
   formatCurrency, 
   getCurrentMonth, 
   getMonthName, 
   calculateNetProfit,
-  calculateMonthlyStats 
+  calculateMonthlyStats,
+  getCurrentMonthMM
 } from '../utils/calculations';
+import {asArray} from "../helpers/http.ts";
 
 const ProfitManagement: React.FC = () => {
   const [monthlyProfits, setMonthlyProfits] = useState<MonthlyProfit[]>([]);
-  const [setClients] = useState<Client[]>([]);
+  const [, setClients] = useState<Client[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [debtRecords, setDebtRecords] = useState<DebtRecord[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -20,11 +23,11 @@ const ProfitManagement: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProfit, setEditingProfit] = useState<MonthlyProfit | null>(null);
-  const [selectedMonth] = useState(getCurrentMonth());
+  const [selectedMonth] = useState(getCurrentMonthMM());
   const [loading, setLoading] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [formData, setFormData] = useState({
-    month: getCurrentMonth(),
+    month: getCurrentMonthMM(),  // "MM"
     totalRevenue: '',
     totalExpenses: '',
     totalDebtsAdded: '',
@@ -33,12 +36,13 @@ const ProfitManagement: React.FC = () => {
   });
 
   const getMonthOptions = () => {
-    const months = [];
-    const currentDate = new Date();
+    const months: { value: string; label: string }[] = [];
+    const now = new Date();
     for (let i = 0; i < 12; i++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const monthString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      months.push({ value: monthString, label: getMonthName(monthString) });
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mm = String(d.getMonth() + 1).padStart(2, '0'); // <-- value faqat "MM"
+      const label = `${d.getFullYear()} ${d.toLocaleDateString('uz-UZ', { month: 'long' })}`;
+      months.push({ value: mm, label });                    // <-- label chiroyli, value "MM"
     }
     return months;
   };
@@ -55,60 +59,21 @@ const ProfitManagement: React.FC = () => {
     try {
       setLoading(true);
       const [profitsData, clientsData, expensesData, debtRecordsData, paymentsData, productsData] = await Promise.all([
-        apiService.getMonthlyProfits(),
+        apiService.getMonthlyProfits(selectedMonth === 'all' ? undefined : selectedMonth),
         apiService.getClients(),
         apiService.getExpenses(),
         apiService.getDebtRecords(),
         apiService.getPayments(),
         apiService.getProducts()
       ]);
-      
-      setMonthlyProfits(profitsData.map((profit: any) => ({
-        ...profit,
-        totalRevenue: profit.total_revenue,
-        totalExpenses: profit.total_expenses,
-        totalDebtsAdded: profit.total_debts_added,
-        debtPayments: profit.debt_payments || 0,
-        productProfit: profit.product_profit || 0,
-        netProfit: profit.net_profit,
-        createdAt: new Date(profit.created_at)
-      })));
-      
-      setClients(clientsData.map((client: any) => ({
-        ...client,
-        totalDebt: client.total_debt,
-        paidAmount: client.paid_amount,
-        createdAt: new Date(client.created_at),
-        lastPayment: client.last_payment ? new Date(client.last_payment) : undefined
-      })));
-      
-      setExpenses(expensesData.map((expense: any) => ({
-        ...expense,
-        date: new Date(expense.date)
-      })));
-      
-      setDebtRecords(debtRecordsData.map((record: any) => ({
-        ...record,
-        clientId: record.client_id,
-        date: new Date(record.date)
-      })));
-      
-      setPayments(paymentsData.map((payment: any) => ({
-        ...payment,
-        clientId: payment.client_id,
-        date: new Date(payment.date)
-      })));
-      
-      setProducts(productsData.map((product: any) => ({
-        ...product,
-        purchasePrice: product.purchase_price,
-        salePrice: product.sale_price,
-        stockQuantity: product.stock_quantity,
-        minQuantity: product.min_quantity,
-        createdAt: new Date(product.created_at),
-        updatedAt: new Date(product.updated_at)
-      })));
-      
+
+      setMonthlyProfits(asArray(profitsData).map(toMonthlyProfit));
+      setClients(asArray(clientsData).map(toClient));
+      setExpenses(asArray(expensesData).map(toExpense));
+      setDebtRecords(asArray(debtRecordsData).map(toDebtRecord));
+      setPayments(asArray(paymentsData).map(toPayment));
+      setProducts(asArray(productsData).map(toProduct));
+
       // Sales would need separate API endpoint
       setSales([]);
     } catch (error) {
@@ -127,9 +92,13 @@ const ProfitManagement: React.FC = () => {
       totalExpenses: profit.totalExpenses.toString(),
       totalDebtsAdded: profit.totalDebtsAdded.toString(),
       debtPayments: profit.debtPayments.toString(),
-      productProfit: profit.productProfit.toString()
+      productProfit: (profit.productProfit ?? 0).toString()
     });
     setShowAddForm(true);
+  };
+
+  const handleShowHistory = (profit: MonthlyProfit) => {
+    console.log('History clicked for', profit);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -137,28 +106,46 @@ const ProfitManagement: React.FC = () => {
     
     try {
       if (editingProfit) {
+        const netProfitToSend = calculateNetProfit(
+            Number(formData.totalRevenue || 0),
+            Number(formData.totalExpenses || 0),
+            Number(formData.totalDebtsAdded || 0),
+            Number(formData.debtPayments || 0),
+            Number(formData.productProfit || 0)
+        );
+
         await apiService.updateMonthlyProfit(editingProfit.id, {
-          month: formData.month,
+          month: Number(formData.month),            // "07" -> 7
           total_revenue: Number(formData.totalRevenue),
           total_expenses: Number(formData.totalExpenses),
           total_debts_added: Number(formData.totalDebtsAdded),
           debt_payments: Number(formData.debtPayments),
-          product_profit: Number(formData.productProfit)
+          product_profit: Number(formData.productProfit || 0),
+          net_profit: netProfitToSend,              // <-- MUHIM!
         });
         setEditingProfit(null);
       } else {
+        const netProfitToSend = calculateNetProfit(
+            Number(formData.totalRevenue || 0),
+            Number(formData.totalExpenses || 0),
+            Number(formData.totalDebtsAdded || 0),
+            Number(formData.debtPayments || 0),
+            Number(formData.productProfit || 0)
+        );
+
         await apiService.createMonthlyProfit({
-          month: formData.month,
+          month: Number(formData.month),                // "07" -> 7
           total_revenue: Number(formData.totalRevenue),
           total_expenses: Number(formData.totalExpenses),
           total_debts_added: Number(formData.totalDebtsAdded),
           debt_payments: Number(formData.debtPayments),
-          product_profit: Number(formData.productProfit)
+          product_profit: Number(formData.productProfit || 0),
+          net_profit: netProfitToSend,
         });
       }
       
       setFormData({
-        month: getCurrentMonth(),
+        month: getCurrentMonthMM(),
         totalRevenue: '',
         totalExpenses: '',
         totalDebtsAdded: '',
@@ -166,18 +153,18 @@ const ProfitManagement: React.FC = () => {
         productProfit: ''
       });
       setShowAddForm(false);
-      loadDataFromAPI(); // Reload data
+      await loadDataFromAPI(); // Reload data
     } catch (error) {
       console.error('Failed to save profit:', error);
       alert('Foyda ma\'lumotini saqlashda xatolik yuz berdi');
     }
   };
 
-  const handleDelete = async (profitId: string) => {
+  const handleDelete = async (profitId: number) => {
     if (window.confirm('Bu oylik foyda yozuvini o\'chirmoqchimisiz?')) {
       try {
         await apiService.deleteMonthlyProfit(profitId);
-        loadDataFromAPI(); // Reload data
+        await loadDataFromAPI(); // Reload data
       } catch (error) {
         console.error('Failed to delete profit:', error);
         alert('Foyda yozuvini o\'chirishda xatolik yuz berdi');
@@ -205,13 +192,11 @@ const ProfitManagement: React.FC = () => {
     });
   };
 
-  const filteredProfits = monthlyProfits.sort((a, b) => 
-    new Date(b.month + '-01').getTime() - new Date(a.month + '-01').getTime()
+  const filteredProfits = [...monthlyProfits].sort(
+      (a, b) => parseInt(b.month) - parseInt(a.month)
   );
 
-  const totalYearlyProfit = monthlyProfits
-    .filter(profit => profit.month.startsWith(new Date().getFullYear().toString()))
-    .reduce((sum, profit) => sum + profit.netProfit, 0);
+  const totalYearlyProfit = monthlyProfits.reduce((s, p) => s + p.netProfit, 0);
 
   if (loading) {
     return (

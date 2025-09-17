@@ -18,8 +18,8 @@ export interface ExpenseApi {
     amount: number;
     description: string | null;
     date: string;              // 'YYYY-MM-DD'
-    created_at: string;
-    updated_at: string;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface PaymentApi {

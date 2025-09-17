@@ -12,12 +12,14 @@ class ProfitController extends Controller
     public function __construct(private MonthlyProfitService $service) {}
 
     public function index(Request $r)
-    { return $this->service->list($r->query('month')); }
+    {
+        return $this->service->list($r->query('month'));
+    }
 
     public function store(Request $r)
     {
         $d = $r->validate([
-            'month' => 'required|integer', // masalan 202509 yoki xohlagan formatda
+            'month' => 'required|integer|min:1|max:12',
             'total_revenue' => 'required|numeric',
             'total_expenses' => 'required|numeric',
             'total_debts_added' => 'required|numeric',
@@ -31,7 +33,7 @@ class ProfitController extends Controller
     public function update(Request $r, MonthlyProfit $profit)
     {
         $d = $r->validate([
-            'month' => 'sometimes|integer',
+            'month' => 'sometimes|integer|min:1|max:12',
             'total_revenue' => 'sometimes|numeric',
             'total_expenses' => 'sometimes|numeric',
             'total_debts_added' => 'sometimes|numeric',

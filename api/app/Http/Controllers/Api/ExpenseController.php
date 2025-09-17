@@ -22,7 +22,8 @@ class ExpenseController extends Controller
             'description' => 'nullable|string',
             'date' => 'required|date',
         ]);
-        return $this->service->create($d);
+        $expense = $this->service->create($d);
+        return response()->json($expense, 201);
     }
 
     public function update(Request $r, Expense $expense)
@@ -30,7 +31,7 @@ class ExpenseController extends Controller
         $d = $r->validate([
             'category' => 'sometimes|integer|min:0|max:255',
             'amount' => 'sometimes|numeric',
-            'description' => 'nullable|string',
+            'description' => 'sometimes|nullable|string',
             'date' => 'sometimes|date',
         ]);
         return $this->service->update($expense, $d);
