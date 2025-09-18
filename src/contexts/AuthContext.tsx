@@ -11,7 +11,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (telegram: string, password: string) => Promise<void>;
-  register: (telegram: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -58,18 +57,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (telegram: string, password: string, name: string) => {
-    try {
-      const response = await apiService.register(telegram, password, name);
-      if (response.session) {
-        localStorage.setItem('auth_token', response.session.access_token);
-        setUser(response.user);
-      }
-    } catch (error) {
-      throw error;
-    }
-  };
-
   const logout = async () => {
     try {
       await apiService.logout();
@@ -84,7 +71,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     loading,
     login,
-    register,
     logout,
     isAuthenticated: !!user,
   };

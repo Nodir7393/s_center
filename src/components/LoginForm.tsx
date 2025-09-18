@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {apiService} from "../services/api.ts";
 
 const LoginForm: React.FC = () => {
-  const { login, register } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const { login } = useAuth();
+  const [isLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -35,7 +35,6 @@ const LoginForm: React.FC = () => {
         if (formData.password !== formData.confirmPassword) {
           throw new Error('Parollar mos kelmaydi');
         }
-        await register(formData.telegram, formData.password, formData.name);
       }
     } catch (error: any) {
       setError(error.message || 'Xatolik yuz berdi');
@@ -78,23 +77,6 @@ const LoginForm: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ism
-              </label>
-              <input
-                type="text"
-                name="name"
-                required={!isLogin}
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Ismingizni kiriting"
-              />
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Telegram Username
@@ -149,23 +131,6 @@ const LoginForm: React.FC = () => {
             </div>
           </div>
 
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Parolni tasdiqlash
-              </label>
-              <input
-                type="password"
-                name="confirmPassword"
-                required={!isLogin}
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Parolni qayta kiriting"
-              />
-            </div>
-          )}
-
           <button
             type="submit"
             disabled={loading}
@@ -175,33 +140,12 @@ const LoginForm: React.FC = () => {
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : (
               <>
-                {isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
-                <span>{isLogin ? 'Kirish' : 'Ro\'yxatdan o\'tish'}</span>
+                <LogIn className="w-5 h-5" />
+                <span>Kirish</span>
               </>
             )}
           </button>
         </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-              setFormData({
-                telegram: '',
-                password: '',
-                name: '',
-                confirmPassword: ''
-              });
-            }}
-            className="text-purple-600 hover:text-purple-700 font-medium"
-          >
-            {isLogin 
-              ? 'Hisobingiz yo\'qmi? Ro\'yxatdan o\'ting' 
-              : 'Hisobingiz bormi? Kirish'
-            }
-          </button>
-        </div>
 
         <div className="mt-8 pt-6 border-t border-gray-200">
           <p className="text-center text-sm text-gray-500">
