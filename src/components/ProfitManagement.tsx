@@ -11,7 +11,7 @@ import {
   calculateMonthlyStats,
   getCurrentMonthMM
 } from '../utils/calculations';
-import {asArray} from "../helpers/http.ts";
+import {asArray} from "../helpers/http";
 
 const ProfitManagement: React.FC = () => {
   const [monthlyProfits, setMonthlyProfits] = useState<MonthlyProfit[]>([]);
