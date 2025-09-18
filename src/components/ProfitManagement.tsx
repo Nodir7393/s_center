@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, Calendar, Edit, Trash2, Filter, History, Calculator } from 'lucide-react';
+import { Plus, TrendingUp, Calendar, Edit, Trash2, Filter, Calculator } from 'lucide-react';
 import { MonthlyProfit, Client, Expense, DebtRecord, Payment, Product, Sale } from '../types/app-types';
 import {toClient, toDebtRecord, toExpense, toMonthlyProfit, toPayment, toProduct} from '../helpers/mappers';
 import { apiService } from '../services/api';
@@ -51,8 +51,8 @@ const ProfitManagement: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    loadDataFromAPI();
+  const loadData = (): void => {
+    void loadDataFromAPI(); // “Promise returned is ignored” warning yo‘qoladi
   };
 
   const loadDataFromAPI = async () => {
@@ -95,10 +95,6 @@ const ProfitManagement: React.FC = () => {
       productProfit: (profit.productProfit ?? 0).toString()
     });
     setShowAddForm(true);
-  };
-
-  const handleShowHistory = (profit: MonthlyProfit) => {
-    console.log('History clicked for', profit);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -307,15 +303,6 @@ const ProfitManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      {/* Tarix (ko‘rish) */}
-                      <button
-                        onClick={() => handleShowHistory(profit)}
-                        className="text-gray-600 hover:text-gray-900 p-1 rounded"
-                        title="Tarix"
-                      >
-                        <History className="w-4 h-4" />
-                      </button>
-
                       {/* Tahrirlash */}
                       <button
                         onClick={() => handleEdit(profit)}
