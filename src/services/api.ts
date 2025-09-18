@@ -1,6 +1,6 @@
 const API_BASE_URL = (typeof window !== 'undefined' && (window as any).__API__URL__) ||
     import.meta?.env?.VITE_API_URL ||
-    'http://localhost:8000/api';
+    'https://apidev.pcbuild.uz/api';
 
 class ApiService {
   private token: string | null = null;
