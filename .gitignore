@@ -12,7 +12,7 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
-./src/vite-env.d.ts
+/src/vite-env.d.ts
 vite.config.ts
 
 # Logs
