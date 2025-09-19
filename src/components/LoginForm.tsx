@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import {apiService} from "../services/api.ts";
+import {apiService} from "../services/api";
 
 const LoginForm: React.FC = () => {
   const { login } = useAuth();
@@ -12,8 +12,6 @@ const LoginForm: React.FC = () => {
   const [formData, setFormData] = useState({
     telegram: '',
     password: '',
-    name: '',
-    confirmPassword: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,10 +29,6 @@ const LoginForm: React.FC = () => {
       
       if (isLogin) {
         await login(formData.telegram, formData.password);
-      } else {
-        if (formData.password !== formData.confirmPassword) {
-          throw new Error('Parollar mos kelmaydi');
-        }
       }
     } catch (error: any) {
       setError(error.message || 'Xatolik yuz berdi');
