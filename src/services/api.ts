@@ -1,5 +1,5 @@
 const API_BASE_URL = (typeof window !== 'undefined' && (window as any).__API__URL__) ||
-    import.meta?.env?.VITE_API_URL ||
+    import.meta.env.VITE_API_URL ||
     'https://apidev.pcbuild.uz/api';
 
 class ApiService {
