@@ -21,29 +21,28 @@ Steam Center uchun mijozlar, mahsulotlar va moliyaviy hisobotlarni boshqarish ti
 - **Lucide React** - Icons
 
 ### Backend
-- **Node.js** - Server runtime
-- **Express.js** - Web framework
-- **Supabase** - Database va authentication
+- **PHP** - Server runtime
+- **Laravel** - Web framework
 - **PostgreSQL** - Database
 
 ## 📋 Talablar
 
 - Node.js 22.17.1+
 - npm 10.0.0+
-- Supabase account
+- PostgreSQL database
 
 ## ⚡ O'rnatish
 
 1. **Repository clone qiling:**
 ```bash
-git clone <repository-url>
-cd steam-center
+git clone git@github.com:Nodir7393/s_center.git
+cd s_center
 ```
 
 2. **Dependencies o'rnating:**
 ```bash
 npm install
-cd server && npm install
+cd api && composer install
 ```
 
 3. **Environment variables sozlang:**
@@ -52,16 +51,8 @@ cd server && npm install
 cp .env.example .env
 
 # Server directory
-cp server/.env.example server/.env
+cp api/.env.example api/.env
 ```
-
-4. **Supabase sozlash:**
-- Supabase account yarating
-- Yangi project yarating
-- Database URL va API keys ni `.env` fayllariga qo'shing
-
-5. **Database migration:**
-- Supabase dashboard orqali migration fayllarini ishga tushiring
 
 ## 🚀 Ishga tushirish
 
@@ -72,7 +63,7 @@ npm run dev:full
 
 # Yoki alohida:
 npm run dev        # Frontend (port 5173)
-npm run server     # Backend (port 3001)
+npm run server     # Backend (port 8000)
 ```
 
 ### Production build
@@ -84,17 +75,16 @@ npm run build
 
 ```
 steam-center/
-├── src/                    # Frontend source
-│   ├── components/         # React components
+├── src/                   # Frontend source
+│   ├── components/        # React components
 │   ├── contexts/          # React contexts
 │   ├── services/          # API services
 │   ├── types/             # TypeScript types
 │   └── utils/             # Utility functions
-├── server/                # Backend server
+├── api/                   # Backend (Laravel) server
 │   ├── routes/            # API routes
-│   └── middleware/        # Express middleware
-├── supabase/              # Database
-│   └── migrations/        # SQL migrations
+│   ├── app/               # Laravel coding
+│   └── database/          # Migration, Seeders 
 └── public/                # Static assets
 ```
 
