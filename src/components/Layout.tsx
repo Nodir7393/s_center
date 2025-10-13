@@ -114,9 +114,9 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
         </div>
       )}
 
-      <div className="flex">
+      <div className="flex h-screen">
         {/* Sidebar */}
-        <div className="hidden lg:block w-64 bg-white shadow-lg h-screen flex flex-col">
+        <div className="hidden lg:block w-64 bg-white shadow-lg h-screen flex flex-col sticky top-0 self-start">
           <div className="pt-6">
             <div className="flex items-center">
               <img
