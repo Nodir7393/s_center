@@ -12,7 +12,7 @@ class ClientController extends Controller
     public function __construct(private ClientService $service) {}
 
     public function index(Request $r)  {
-        $perPage = (int) $r->query('per_page', 20);
+        $perPage = (int) $r->query('per_page', 50);
         $month   = $r->query('month'); // '2025-09' ko‘rinishida bo‘lsa filterlaymiz
         return $this->service->listWithStats($perPage, $month);
     }
