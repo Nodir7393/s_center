@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, DollarSign, TrendingUp, CreditCard, Package, PieChart, AlertTriangle, Calendar, Filter } from 'lucide-react';
 import { Client, Expense, Payment, DebtRecord, Product } from '../types/app-types';
+import type {Dashboard} from '../types/app-types';
 import { apiService } from '../services/api';
 import { formatCurrency, getMonthName } from '../utils/calculations';
 import {toClient, toDebtRecord, toExpense, toPayment, toProduct} from "../helpers/mappers";
@@ -8,11 +9,11 @@ import { asArray } from '../helpers/http';
 
 const Dashboard: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
+  const [dashboard, setDashboard] = useState<Dashboard>();
+  const [lassProducts, setLassProducts] = useState<Product[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [debtRecords, setDebtRecords] = useState<DebtRecord[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  // const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -36,21 +37,22 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const [
-        clientsApi, expensesApi, paymentsApi, debtApi, productsApi
+        clientsApi, expensesApi, paymentsApi, debtApi, dashboardApi, lassProductsApi
       ] = await Promise.all([
         apiService.getClients(),
         apiService.getExpenses(),        // ?month param bermasangiz ham mayli
         apiService.getPayments(),
         apiService.getDebtRecords(),
-        apiService.getProducts(),
+        apiService.getDashboard(),
+        apiService.getLassProducts()
       ]);
 
+      setDashboard(dashboardApi.data);
+      setLassProducts(asArray(lassProductsApi.data).map(toProduct));
       setClients(asArray(clientsApi).map(toClient));
       setExpenses(asArray(expensesApi).map(toExpense));
       setPayments(asArray(paymentsApi).map(toPayment));
       setDebtRecords(asArray(debtApi).map(toDebtRecord));
-      setProducts(asArray(productsApi).map(toProduct));
-      
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -100,14 +102,6 @@ const Dashboard: React.FC = () => {
   };
 
   const filteredData = getFilteredData();
-  const totalClients = clients.length;
-  const totalDebt = clients.reduce((sum, client) => sum + (client.totalDebt - client.paidAmount), 0);
-  const monthlyExpenses = filteredData.expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const monthlyRevenue = filteredData.payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const monthlyDebtsAdded = filteredData.debtRecords.reduce((sum, record) => sum + record.amount, 0);
-
-  const lowStockProducts = products.filter(product => product.stockQuantity <= product.minQuantity);
-  const totalProducts = products.length;
 
   return (
     <div className="space-y-6">
@@ -176,21 +170,21 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Low Stock Alert */}
-      {lowStockProducts.length > 0 && (
+      {lassProducts.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-2">
             <AlertTriangle className="w-5 h-5 text-red-600" />
             <h3 className="text-red-800 font-medium">Kam qolgan mahsulotlar</h3>
           </div>
           <div className="space-y-1">
-            {lowStockProducts.slice(0, 3).map(product => (
+            {lassProducts.slice(0, 3).map(product => (
               <p key={product.id} className="text-red-700 text-sm">
                 • {product.name} - {product.stockQuantity} ta qoldi (minimal: {product.minQuantity})
               </p>
             ))}
-            {lowStockProducts.length > 3 && (
+            {lassProducts.length > 3 && (
               <p className="text-red-700 text-sm">
-                ... va yana {lowStockProducts.length - 3} ta mahsulot
+                ... va yana {lassProducts.length - 3} ta mahsulot
               </p>
             )}
           </div>
@@ -203,7 +197,7 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Jami Mijozlar</p>
-              <p className="text-3xl font-bold text-purple-600">{totalClients}</p>
+              <p className="text-3xl font-bold text-purple-600">{dashboard?.count_client}</p>
             </div>
             <div className="p-3 rounded-full bg-purple-100">
               <Users className="w-8 h-8 text-purple-600" />
@@ -218,7 +212,7 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Jami Qarzlar</p>
-              <p className="text-3xl font-bold text-red-600">{formatCurrency(totalDebt)}</p>
+              <p className="text-3xl font-bold text-red-600">{formatCurrency(dashboard?.total_debt)}</p>
             </div>
             <div className="p-3 rounded-full bg-red-100">
               <CreditCard className="w-8 h-8 text-red-600" />
@@ -235,7 +229,7 @@ const Dashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">
                 {selectedMonth === 'all' ? 'Jami Daromad' : 'Oylik Daromad'}
               </p>
-              <p className="text-3xl font-bold text-green-600">{formatCurrency(monthlyRevenue)}</p>
+              <p className="text-3xl font-bold text-green-600">{formatCurrency(dashboard?.total_revenue)}</p>
             </div>
             <div className="p-3 rounded-full bg-green-100">
               <DollarSign className="w-8 h-8 text-green-600" />
@@ -252,7 +246,7 @@ const Dashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-600">
                 {selectedMonth === 'all' ? 'Jami Xarajat' : 'Oylik Xarajat'}
               </p>
-              <p className="text-3xl font-bold text-orange-600">{formatCurrency(monthlyExpenses)}</p>
+              <p className="text-3xl font-bold text-orange-600">{formatCurrency(dashboard?.total_expense)}</p>
             </div>
             <div className="p-3 rounded-full bg-orange-100">
               <TrendingUp className="w-8 h-8 text-orange-600" />
@@ -270,7 +264,7 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Jami Mahsulotlar</p>
-              <p className="text-2xl font-bold text-blue-600">{totalProducts}</p>
+              <p className="text-2xl font-bold text-blue-600">{dashboard?.count_products}</p>
             </div>
             <div className="p-3 rounded-full bg-blue-100">
               <Package className="w-6 h-6 text-blue-600" />
@@ -285,7 +279,7 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Kam Qolgan</p>
-              <p className="text-2xl font-bold text-red-600">{lowStockProducts.length}</p>
+              <p className="text-2xl font-bold text-red-600">{dashboard?.less_product}</p>
             </div>
             <div className="p-3 rounded-full bg-red-100">
               <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -303,16 +297,16 @@ const Dashboard: React.FC = () => {
                 {selectedMonth === 'all' ? 'Jami Foyda' : 'Oylik Foyda'}
               </p>
               <p className={`text-2xl font-bold ${
-                monthlyRevenue - monthlyExpenses - monthlyDebtsAdded >= 0 ? 'text-green-600' : 'text-red-600'
+                (dashboard?.all_benefit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                {formatCurrency(monthlyRevenue - monthlyExpenses - monthlyDebtsAdded)}
+                {formatCurrency(dashboard?.all_benefit)}
               </p>
             </div>
             <div className={`p-3 rounded-full ${
-              monthlyRevenue - monthlyExpenses - monthlyDebtsAdded >= 0 ? 'bg-green-100' : 'bg-red-100'
+              (dashboard?.all_benefit ?? 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
             }`}>
               <PieChart className={`w-6 h-6 ${
-                monthlyRevenue - monthlyExpenses - monthlyDebtsAdded >= 0 ? 'text-green-600' : 'text-red-600'
+                (dashboard?.all_benefit ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
               }`} />
             </div>
           </div>

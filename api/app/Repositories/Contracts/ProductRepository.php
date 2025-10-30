@@ -14,4 +14,5 @@ interface ProductRepository {
 
     public function addStock(Product $product, int $qty, float $price, ?string $desc): StockEntry;
     public function recordSale(Product $product, int $qty, float $price, ?string $desc): Sale;
+    public function lessProducts();
 }

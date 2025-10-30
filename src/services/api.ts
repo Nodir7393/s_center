@@ -85,8 +85,6 @@ class ApiService {
       body: JSON.stringify({ telegram, password }),
     });
 
-    console.log(response);
-    
     if (response?.token) this.setToken(response.token);
     
     return response;
@@ -113,6 +111,14 @@ class ApiService {
   // Client methods
   async getClients() {
     return this.request('/clients');
+  }
+
+  async getDashboard() {
+    return this.request('/dashboard/statistic');
+  }
+
+  async getLassProducts() {
+    return this.request('/dashboard/lass-products');
   }
 
   async createClient(client: any) {

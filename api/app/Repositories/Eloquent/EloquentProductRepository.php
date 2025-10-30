@@ -65,4 +65,10 @@ class EloquentProductRepository implements ProductRepository
             return $sale;
         });
     }
+
+
+    public function lessProducts()
+    {
+        return Product::whereColumn('stock_quantity', '<=', 'min_quantity')->get();
+    }
 }

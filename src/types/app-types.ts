@@ -10,6 +10,27 @@ export interface Client {
     lastPayment?: Date;
 }
 
+export interface Dashboard {
+    count_client: number;
+    total_debt: number;
+    total_revenue: number;
+    total_expense: number;
+    less_product: number;
+    count_products: number;
+    all_benefit: number;
+}
+
+export interface LassProduct {
+    id: number;
+    category: number;
+    purchase_price: number;
+    sale_price: number;
+    stock_quantity: number;
+    min_quantity: number;
+    created_at: Date;
+    updated_at: Date;
+}
+
 export type ExpenseCategory =
     | 'rent' | 'internet' | 'electricity' | 'tax' | 'salary' | 'personal';
 
