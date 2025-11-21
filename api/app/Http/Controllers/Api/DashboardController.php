@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Repositories\Contracts\DashboardRepository;
+use App\Repositories\Contracts\ExpenseRepository;
+use App\Repositories\Contracts\PaymentRepository;
 use App\Repositories\Contracts\ProductRepository;
 use Illuminate\Http\JsonResponse;
 
@@ -12,7 +13,9 @@ class DashboardController extends Controller
 {
     public function __construct(
         private readonly DashboardRepository $repo,
-        private readonly ProductRepository $repoProduct
+        private readonly ProductRepository $repoProduct,
+        private readonly PaymentRepository $repoPayment,
+        private readonly ExpenseRepository $repoExpense
     ) {}
 
     public function all(): JsonResponse
@@ -32,6 +35,20 @@ class DashboardController extends Controller
     {
         return response()->successJson(
             $this->repoProduct->lessProducts()
+        );
+    }
+
+    public function recentPayments()
+    {
+        return response()->successJson(
+            $this->repoPayment->recentPayments()
+        );
+    }
+
+    public function recentExpenses()
+    {
+        return response()->successJson(
+            $this->repoExpense->recentExpenses()
         );
     }
 }

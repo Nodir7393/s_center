@@ -139,6 +139,12 @@ class ApiService {
     return this.request(`/clients/${id}`, { method: 'DELETE' });
   }
 
+  // Recent Expense methods
+  async getRecentExpenses(month?: string) {
+    const params = month ? `?month=${month}` : '';
+    return this.request(`/dashboard/recent-expenses${params}`);
+  }
+
   // Expense methods
   async getExpenses(month?: string) {
     const params = month ? `?month=${month}` : '';
@@ -170,6 +176,14 @@ class ApiService {
     if (month) params.append('month', month);
     const queryString = params.toString();
     return this.request(`/payments${queryString ? `?${queryString}` : ''}`);
+  }
+
+  // Recent Payment methods
+  async getRecentPayments(month?: string) {
+    const params = new URLSearchParams();
+    if (month) params.append('month', month);
+    const queryString = params.toString();
+    return this.request(`/dashboard/recent-payments${queryString ? `?${queryString}` : ''}`);
   }
 
   async createPayment(payment: any) {

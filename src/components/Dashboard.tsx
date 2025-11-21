@@ -40,8 +40,8 @@ const Dashboard: React.FC = () => {
         clientsApi, expensesApi, paymentsApi, debtApi, dashboardApi, lassProductsApi
       ] = await Promise.all([
         apiService.getClients(),
-        apiService.getExpenses(),        // ?month param bermasangiz ham mayli
-        apiService.getPayments(),
+        apiService.getRecentExpenses(),        // ?month param bermasangiz ham mayli
+        apiService.getRecentPayments(),
         apiService.getDebtRecords(),
         apiService.getDashboard(),
         apiService.getLassProducts()

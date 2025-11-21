@@ -33,7 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('profits', ProfitController::class)->only(['index','store','update','destroy']);
 
-
     Route::get('dashboard/statistic', [DashboardController::class, 'all']);
     Route::get('dashboard/lass-products', [DashboardController::class, 'lassProducts']);
+    Route::get('dashboard/recent-payments', [DashboardController::class, 'recentPayments']);
+    Route::get('dashboard/recent-expenses', [DashboardController::class, 'recentExpenses']);
 });

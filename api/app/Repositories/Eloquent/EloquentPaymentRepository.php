@@ -13,6 +13,13 @@ class EloquentPaymentRepository implements PaymentRepository
         if ($month)   $q->whereRaw("to_char(created_at, 'YYYY-MM') = ?", [$month]); // PG
         return $q->paginate($perPage);
     }
+
+    public function recentPayments(?string $month)
+    {
+        $q = Payment::query()->latest('id');
+        if ($month)   $q->whereRaw("to_char(created_at, 'YYYY-MM') = ?", [$month]); // PG
+        return $q->limit(5)->get();
+    }
     public function create(array $data): Payment { return Payment::create($data); }
     public function delete(Payment $p): void { $p->delete(); }
 }
