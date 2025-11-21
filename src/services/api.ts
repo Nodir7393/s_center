@@ -181,7 +181,7 @@ class ApiService {
   // Recent Payment methods
   async getRecentPayments(month?: string) {
     const params = new URLSearchParams();
-    if (month) params.append('month', month);
+    if (month && month !== 'all') params.append('month', month);
     const queryString = params.toString();
     return this.request(`/dashboard/recent-payments${queryString ? `?${queryString}` : ''}`);
   }

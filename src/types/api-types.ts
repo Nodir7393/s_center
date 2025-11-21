@@ -25,6 +25,7 @@ export interface ExpenseApi {
 export interface PaymentApi {
     id: number;
     client_id: number;
+    client_name: string;
     amount: number;
     description: string | null;
     created_at: string;        // date/time yo‘q bo‘lsa created_at dan foydalanamiz

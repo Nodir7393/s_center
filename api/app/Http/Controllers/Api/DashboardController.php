@@ -8,6 +8,7 @@ use App\Repositories\Contracts\ExpenseRepository;
 use App\Repositories\Contracts\PaymentRepository;
 use App\Repositories\Contracts\ProductRepository;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
@@ -38,17 +39,21 @@ class DashboardController extends Controller
         );
     }
 
-    public function recentPayments()
+    public function recentPayments(Request $request)
     {
+        $month = $request->query('month');
+
         return response()->successJson(
-            $this->repoPayment->recentPayments()
+            $this->repoPayment->recentPayments($month)
         );
     }
 
-    public function recentExpenses()
+    public function recentExpenses(Request $request)
     {
+        $month = $request->query('month');
+
         return response()->successJson(
-            $this->repoExpense->recentExpenses()
+            $this->repoExpense->recentExpenses($month)
         );
     }
 }

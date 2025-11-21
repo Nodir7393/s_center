@@ -14,9 +14,12 @@ class EloquentExpenseRepository implements ExpenseRepository
         return $q->paginate($perPage);
     }
 
-    public function recentExpenses(?string $month)
+    public function recentExpenses(?string $month = null)
     {
-        $q = Expense::query()->latest('id');
+        $q = Expense::query()
+            ->latest('created_at');
+
+        // Agar month parametri berilgan bo'lsa, filtrlash
         if ($month) $q->whereRaw("to_char(date, 'YYYY-MM') = ?", [$month]);
         return $q->limit(5)->get();
     }

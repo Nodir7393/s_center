@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Users, DollarSign, TrendingUp, CreditCard, Package, PieChart, AlertTriangle, Calendar, Filter } from 'lucide-react';
-import { Client, Expense, Payment, DebtRecord, Product } from '../types/app-types';
+import { Expense, Payment, DebtRecord, Product } from '../types/app-types';
 import type {Dashboard} from '../types/app-types';
 import { apiService } from '../services/api';
 import { formatCurrency, getMonthName } from '../utils/calculations';
-import {toClient, toDebtRecord, toExpense, toPayment, toProduct} from "../helpers/mappers";
+import { toDebtRecord, toExpense, toPayment, toProduct } from "../helpers/mappers";
 import { asArray } from '../helpers/http';
 
 const Dashboard: React.FC = () => {
-  const [clients, setClients] = useState<Client[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard>();
   const [lassProducts, setLassProducts] = useState<Product[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -31,17 +30,20 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [selectedMonth]);
 
   const loadData = async () => {
     try {
       setLoading(true);
+
+      // selectedMonth parametrini yuboramiz
+      const monthParam = selectedMonth === 'all' ? undefined : selectedMonth;
+
       const [
-        clientsApi, expensesApi, paymentsApi, debtApi, dashboardApi, lassProductsApi
+        expensesApi, paymentsApi, debtApi, dashboardApi, lassProductsApi
       ] = await Promise.all([
-        apiService.getClients(),
-        apiService.getRecentExpenses(),        // ?month param bermasangiz ham mayli
-        apiService.getRecentPayments(),
+        apiService.getRecentExpenses(monthParam),        // ?month param bermasangiz ham mayli
+        apiService.getRecentPayments(monthParam),
         apiService.getDebtRecords(),
         apiService.getDashboard(),
         apiService.getLassProducts()
@@ -49,12 +51,11 @@ const Dashboard: React.FC = () => {
 
       setDashboard(dashboardApi.data);
       setLassProducts(asArray(lassProductsApi.data).map(toProduct));
-      setClients(asArray(clientsApi).map(toClient));
       setExpenses(asArray(expensesApi).map(toExpense));
       setPayments(asArray(paymentsApi).map(toPayment));
       setDebtRecords(asArray(debtApi).map(toDebtRecord));
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('Ma\'lumot yuklashda xato:', error);
     } finally {
       setLoading(false);
     }
@@ -324,25 +325,23 @@ const Dashboard: React.FC = () => {
             {selectedMonth === 'all' ? 'So\'nggi To\'lovlar' : `${getMonthName(selectedMonth)} To'lovlari`}
           </h2>
           <div className="space-y-3">
-            {filteredData.payments
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            {payments
               .slice(0, 5)
               .map((payment) => {
-                const client = clients.find(c => c.id === payment.clientId);
                 return (
                   <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">{client?.name || 'Noma\'lum mijoz'}</p>
+                      <p className="font-medium text-gray-900">{payment.clientName}</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(payment.date).toLocaleDateString('uz-UZ')}
+                        {payment.date.toLocaleDateString('uz-UZ')}
                       </p>
                     </div>
                     <p className="font-medium text-green-600">{formatCurrency(payment.amount)}</p>
                   </div>
                 );
               })}
-            {filteredData.payments.length === 0 && (
-              <p className="text-gray-500 text-center py-4">To'lovlar mavjud emas</p>
+            {payments.length === 0 && (
+                <p className="text-gray-500 text-center py-4">To'lovlar mavjud emas</p>
             )}
           </div>
         </div>

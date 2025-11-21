@@ -73,6 +73,7 @@ export const toExpense = (e: ExpenseApi): Expense => {
 export const toPayment = (p: PaymentApi): Payment => ({
     id: p.id,
     clientId: p.client_id,
+    clientName: p.client_name,
     amount: Number(p.amount),
     description: p.description ?? undefined,
     date: new Date(p.created_at), // API’da date yo‘q — created_at

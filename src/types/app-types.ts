@@ -51,6 +51,7 @@ export interface MonthlyExpenses {
 export interface Payment {
     id: number;
     clientId: number;
+    clientName: string;
     amount: number;
     date: Date;                  // created_at dan
     description?: string;
