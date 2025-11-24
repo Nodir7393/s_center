@@ -6,7 +6,7 @@ use App\Models\Payment;
 interface PaymentRepository {
     public function paginate(?int $clientId, ?string $month, int $perPage = 20);
 
-    public function recentPayments(?string $month);
+    public function recentPayments(?string $month = null);
     public function create(array $data): Payment;
     public function delete(Payment $payment): void;
 }

@@ -19,13 +19,15 @@ class DashboardController extends Controller
         private readonly ExpenseRepository $repoExpense
     ) {}
 
-    public function all(): JsonResponse
+    public function all(Request $request): JsonResponse
     {
+        $month = $request->query('month');
+
         return response()->successJson([
             'count_client' => $this->repo->countClients(),
-            'total_debt' => $this->repo->totalDebt(),
-            'total_revenue' => $this->repo->totalRevenue(),
-            'total_expense' => $this->repo->totalExpense(),
+            'total_debt' => $this->repo->totalDebt($month),
+            'total_revenue' => $this->repo->totalRevenue($month),
+            'total_expense' => $this->repo->totalExpense($month),
             'less_product' => $this->repo->countLessProduct(),
             'count_products' => $this->repo->countProducts(),
             'all_benefit' => $this->repo->allBenefit(),

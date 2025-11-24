@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
       ] = await Promise.all([
         apiService.getRecentExpenses(monthParam),        // ?month param bermasangiz ham mayli
         apiService.getRecentPayments(monthParam),
-        apiService.getDebtRecords(),
+        apiService.getDebtRecords(undefined, monthParam),
         apiService.getDashboard(),
         apiService.getLassProducts()
       ]);
