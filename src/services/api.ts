@@ -291,6 +291,18 @@ class ApiService {
     console.log(res);
     return res;
   }
+
+  // Oylik statistika
+  async getMonthlyStatistics(month?: string) {
+    const params = month && month !== 'all' ? `?month=${month}` : '';
+    return this.request(`/statistics/monthly${params}`);
+  }
+
+  // Mijoz tarixi (statistika bilan)
+  async getClientHistory(clientId: number, month?: string) {
+    const params = month && month !== 'all' ? `?month=${month}` : '';
+    return this.request(`/clients/${clientId}/history${params}`);
+  }
 }
 
 export const apiService = new ApiService();

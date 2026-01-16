@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\{ClientController,
+    ClientStatisticsController,
     DashboardController,
     DebtRecordController,
     ExpenseController,
@@ -37,4 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/lass-products', [DashboardController::class, 'lassProducts']);
     Route::get('dashboard/recent-payments', [DashboardController::class, 'recentPayments']);
     Route::get('dashboard/recent-expenses', [DashboardController::class, 'recentExpenses']);
+
+    // Statistika route'lari
+    Route::get('/statistics/monthly', [ClientStatisticsController::class, 'monthlyStats']);
+    Route::get('/clients/{clientId}/history', [ClientStatisticsController::class, 'clientHistory']);
 });

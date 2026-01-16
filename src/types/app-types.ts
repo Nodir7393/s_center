@@ -111,3 +111,27 @@ export interface Sale {
     date: Date;
     description?: string;
 }
+
+export interface MonthlyStats {
+    total_debts: number;
+    total_payments: number;
+    remaining_debt: number;
+}
+
+interface ClientHistoryItem {
+    id: number;
+    type: 'payment' | 'debt';
+    amount: number;
+    description: string | null;
+    date: string;
+}
+
+export interface ClientHistoryResponse {
+    client: { id: number; name: string };
+    statistics: {
+        total_debts: number;
+        total_payments: number;
+        remaining_debt: number;
+    };
+    history: ClientHistoryItem[];
+}

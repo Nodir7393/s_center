@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Trash2, DollarSign, CreditCard, History, X, Users, Calendar, Filter } from 'lucide-react';
-import { Client, Payment, DebtRecord } from '../types/app-types';
+import { Client, Payment, DebtRecord, MonthlyStats, ClientHistoryResponse } from '../types/app-types';
 import { apiService } from '../services/api';
 import { formatCurrency, getMonthName } from '../utils/calculations';
 import { asArray } from '../helpers/http';
@@ -39,6 +39,31 @@ const ClientManagement: React.FC = () => {
     amount: '',
     description: ''
   });
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats>({
+    total_debts: 0,
+    total_payments: 0,
+    remaining_debt: 0,
+  });
+  const [clientHistory, setClientHistory] = useState<ClientHistoryResponse | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Pagination uchun
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Oylik statistikani yuklash
+  const loadMonthlyStats = async (month: string) => {
+    try {
+      const stats = await apiService.getMonthlyStatistics(month === 'all' ? undefined : month);
+      setMonthlyStats({
+        total_debts: stats.total_debts || 0,
+        total_payments: stats.total_payments || 0,
+        remaining_debt: stats.remaining_debt || 0,
+      });
+    } catch (error) {
+      console.error('Failed to load monthly stats:', error);
+    }
+  };
 
   const getMonthOptions = () => {
     const months = [{ value: 'all', label: 'Hamma vaqt' }];
@@ -55,9 +80,52 @@ const ClientManagement: React.FC = () => {
     loadData();
   }, []);
 
+  // Oy o'zgarganda statistikani yangilash
+  useEffect(() => {
+    loadMonthlyStats(selectedMonth);
+  }, [selectedMonth]);
+
   const loadData = () => {
     loadDataFromAPI();
   };
+
+  // Mijoz tarixini yuklash
+  const loadClientHistory = async (clientId: number, month: string) => {
+    setHistoryLoading(true);
+    try {
+      const response = await apiService.getClientHistory(
+          clientId,
+          month === 'all' ? undefined : month
+      );
+      setClientHistory(response);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error('Failed to load client history:', error);
+      alert('Mijoz tarixini yuklashda xatolik yuz berdi');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // History modal ochilganda yuklash
+  useEffect(() => {
+    if (showHistoryModal && selectedClient) {
+      loadClientHistory(selectedClient.id, selectedMonth);
+    }
+  }, [showHistoryModal, selectedClient, selectedMonth]);
+
+  // Pagination logic (frontend'da)
+  const paginatedHistory = useMemo(() => {
+    if (!clientHistory?.history) return [];
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return clientHistory.history.slice(start, end);
+  }, [clientHistory, currentPage]);
+
+  const totalPages = useMemo(() => {
+    if (!clientHistory?.history) return 0;
+    return Math.ceil(clientHistory.history.length / itemsPerPage);
+  }, [clientHistory]);
 
   const loadDataFromAPI = async () => {
     try {
@@ -81,15 +149,14 @@ const ClientManagement: React.FC = () => {
 
   const handleAddClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const clientData = await apiService.createClient({
         name: formData.name,
         telephone: formData.phone,
         telegram: formData.telegram,
       });
-      
-      // If initial debt, create debt record
+
       if (Number(formData.totalDebt) > 0) {
         await apiService.createDebtRecord({
           client_id: clientData.id,
@@ -98,10 +165,11 @@ const ClientManagement: React.FC = () => {
           type: 'initial'
         });
       }
-      
+
       setFormData({ name: '', phone: '', telegram: '', totalDebt: '' });
       setShowAddForm(false);
-      loadDataFromAPI(); // Reload data
+      loadDataFromAPI();
+      loadMonthlyStats(selectedMonth); // Statistikani yangilash
     } catch (error) {
       console.error('Failed to create client:', error);
       alert('Mijoz qo\'shishda xatolik yuz berdi');
@@ -122,7 +190,8 @@ const ClientManagement: React.FC = () => {
       setPaymentData({ amount: '', description: '' });
       setShowPaymentForm(false);
       setSelectedClient(null);
-      loadDataFromAPI(); // Reload data
+      loadDataFromAPI();
+      loadMonthlyStats(selectedMonth); // Statistikani yangilash
     } catch (error) {
       console.error('Failed to create payment:', error);
       alert('To\'lov qilishda xatolik yuz berdi');
@@ -144,7 +213,8 @@ const ClientManagement: React.FC = () => {
       setDebtData({ amount: '', description: '' });
       setShowDebtForm(false);
       setSelectedClient(null);
-      loadDataFromAPI(); // Reload data
+      loadDataFromAPI();
+      loadMonthlyStats(selectedMonth); // Statistikani yangilash
     } catch (error) {
       console.error('Failed to add debt:', error);
       alert('Qarz qo\'shishda xatolik yuz berdi');
@@ -156,22 +226,22 @@ const ClientManagement: React.FC = () => {
     if (selectedClients.length === 0) return;
 
     try {
-      // Create debt records for all selected clients
       await Promise.all(
-        selectedClients.map((clientId) =>
-          apiService.createDebtRecord({
-            client_id: clientId, // id’lar string bo‘lsa — to‘g‘ri
-            amount: Number(bulkDebtData.amount),
-            description: bulkDebtData.description || "Ommaviy qarz qo'shish",
-            type: 'additional',
-          })
-        )
+          selectedClients.map((clientId) =>
+              apiService.createDebtRecord({
+                client_id: clientId,
+                amount: Number(bulkDebtData.amount),
+                description: bulkDebtData.description || "Ommaviy qarz qo'shish",
+                type: 'additional',
+              })
+          )
       );
 
       setBulkDebtData({ amount: '', description: '' });
       setSelectedClients([]);
       setShowBulkDebtForm(false);
-      await loadDataFromAPI(); // Reload data
+      await loadDataFromAPI();
+      loadMonthlyStats(selectedMonth); // Statistikani yangilash
     } catch (error) {
       console.error('Failed to add bulk debt:', error);
       alert('Ommaviy qarz qo\'shishda xatolik yuz berdi');
@@ -179,10 +249,10 @@ const ClientManagement: React.FC = () => {
   };
 
   const handleClientSelection = (clientId: number) => {
-    setSelectedClients(prev => 
-      prev.includes(clientId) 
-        ? prev.filter(id => id !== clientId)
-        : [...prev, clientId]
+    setSelectedClients(prev =>
+        prev.includes(clientId)
+            ? prev.filter(id => id !== clientId)
+            : [...prev, clientId]
     );
   };
 
@@ -190,7 +260,8 @@ const ClientManagement: React.FC = () => {
     if (window.confirm('Bu mijozni o\'chirmoqchimisiz?')) {
       try {
         await apiService.deleteClient(clientId);
-        loadDataFromAPI(); // Reload data
+        loadDataFromAPI();
+        loadMonthlyStats(selectedMonth); // Statistikani yangilash
       } catch (error) {
         console.error('Failed to delete client:', error);
         alert('Mijozni o\'chirishda xatolik yuz berdi');
@@ -199,110 +270,43 @@ const ClientManagement: React.FC = () => {
   };
 
   const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.phone.includes(searchTerm)
+      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.phone.includes(searchTerm)
   );
-
-  const getClientPayments = (clientId: number) => {
-    return payments.filter(payment => payment.clientId === clientId);
-  };
-
-  const getClientDebtRecords = (clientId: number) => {
-    return debtRecords.filter(record => record.clientId === clientId);
-  };
-
-  const getClientHistory = (clientId: number) => {
-    const allClientPayments = getClientPayments(clientId);
-    const allClientDebts = getClientDebtRecords(clientId);
-    const monthOf = (d: Date) =>
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
-    
-    const filteredPayments = selectedMonth === 'all' 
-      ? allClientPayments
-      : allClientPayments.filter(p => monthOf(p.date) === selectedMonth);
-    
-    const filteredDebts = selectedMonth === 'all'
-      ? allClientDebts
-      : allClientDebts.filter(d => d.month ? d.month === selectedMonth : monthOf(d.date) === selectedMonth);
-    
-    const clientPayments = filteredPayments
-      .map(payment => ({
-        ...payment,
-        type: 'payment' as const
-      }));
-    
-    const clientDebts = filteredDebts
-      .map(debt => ({
-        ...debt,
-        type: 'debt' as const
-      }));
-    
-    return [...clientPayments, ...clientDebts].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-  };
-
-  // Oylik statistikalar
-  const getMonthlyStats = () => {
-    const filteredDebtRecords = selectedMonth === 'all' 
-      ? debtRecords 
-      : debtRecords.filter(record => record.month === selectedMonth);
-    
-    const filteredPayments = selectedMonth === 'all'
-      ? payments
-      : payments.filter(payment => {
-          const paymentDate = new Date(payment.date);
-          const paymentMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
-          return paymentMonth === selectedMonth;
-        });
-    
-    const monthlyDebts = filteredDebtRecords.reduce((sum, record) => sum + record.amount, 0);
-    const monthlyPayments = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    
-    return {
-      totalDebts: monthlyDebts,
-      totalPayments: monthlyPayments,
-      remainingDebt: monthlyDebts - monthlyPayments
-    };
-  };
 
   // Mijozlarni oylik filter bo'yicha filterlash
   const getFilteredClients = () => {
     if (selectedMonth === 'all') {
       return filteredClients;
     }
-    
-    // Tanlangan oyda qarz olgan yoki to'lov qilgan mijozlarni topish
+
     const clientsWithActivity = new Set<number>();
-    
-    // Qarz olgan mijozlar
+
     debtRecords
-      .filter(record => record.month === selectedMonth)
-      .forEach(record => clientsWithActivity.add(record.clientId));
-    
-    // To'lov qilgan mijozlar
+        .filter(record => record.month === selectedMonth)
+        .forEach(record => clientsWithActivity.add(record.clientId));
+
     payments
-      .filter(payment => {
-        const paymentDate = new Date(payment.date);
-        const paymentMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
-        return paymentMonth === selectedMonth;
-      })
-      .forEach(payment => clientsWithActivity.add(payment.clientId));
-    
+        .filter(payment => {
+          const paymentDate = new Date(payment.date);
+          const paymentMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}`;
+          return paymentMonth === selectedMonth;
+        })
+        .forEach(payment => clientsWithActivity.add(payment.clientId));
+
     return filteredClients.filter(client => clientsWithActivity.has(client.id));
   };
 
-  const monthlyStats = getMonthlyStats();
   const displayClients = getFilteredClients();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Ma'lumotlar yuklanmoqda...</p>
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Ma'lumotlar yuklanmoqda...</p>
+          </div>
         </div>
-      </div>
     );
   }
 
@@ -407,7 +411,7 @@ const ClientManagement: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Oylik Jami Qarz</p>
-                <p className="text-xl font-bold text-blue-600">{formatCurrency(monthlyStats.totalDebts)}</p>
+                <p className="text-xl font-bold text-blue-600">{formatCurrency(monthlyStats.total_debts)}</p>
               </div>
               <div className="p-3 rounded-full bg-blue-100">
                 <CreditCard className="w-5 h-5 text-blue-600" />
@@ -422,7 +426,7 @@ const ClientManagement: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Oylik To'langan</p>
-                <p className="text-xl font-bold text-green-600">{formatCurrency(monthlyStats.totalPayments)}</p>
+                <p className="text-xl font-bold text-green-600">{formatCurrency(monthlyStats.total_payments)}</p>
               </div>
               <div className="p-3 rounded-full bg-green-100">
                 <DollarSign className="w-5 h-5 text-green-600" />
@@ -437,12 +441,12 @@ const ClientManagement: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Oylik Qolgan Qarz</p>
-                <p className={`text-xl font-bold ${monthlyStats.remainingDebt > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatCurrency(monthlyStats.remainingDebt)}
+                <p className={`text-xl font-bold ${monthlyStats.remaining_debt > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {formatCurrency(monthlyStats.remaining_debt)}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${monthlyStats.remainingDebt > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
-                <History className={`w-5 h-5 ${monthlyStats.remainingDebt > 0 ? 'text-red-600' : 'text-green-600'}`} />
+              <div className={`p-3 rounded-full ${monthlyStats.remaining_debt > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
+                <History className={`w-5 h-5 ${monthlyStats.remaining_debt > 0 ? 'text-red-600' : 'text-green-600'}`} />
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-1">
@@ -861,6 +865,7 @@ const ClientManagement: React.FC = () => {
                     onClick={() => {
                       setShowHistoryModal(false);
                       setSelectedClient(null);
+                      setClientHistory(null);
                     }}
                     className="text-gray-400 hover:text-gray-600"
                 >
@@ -868,107 +873,122 @@ const ClientManagement: React.FC = () => {
                 </button>
               </div>
 
-              {/* Client Summary */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">Jami Qarz</p>
-                    <p className="font-medium text-lg">
-                      {selectedMonth === 'all'
-                          ? formatCurrency(selectedClient.totalDebt)
-                          : formatCurrency(getClientHistory(selectedClient.id)
-                              .filter(record => record.type === 'debt')
-                              .reduce((sum, record) => sum + record.amount, 0))
-                      }
-                    </p>
+              {historyLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
                   </div>
-                  <div>
-                    <p className="text-gray-500">To'langan</p>
-                    <p className="font-medium text-lg text-green-600">
-                      {selectedMonth === 'all'
-                          ? formatCurrency(selectedClient.paidAmount)
-                          : formatCurrency(getClientHistory(selectedClient.id)
-                              .filter(record => record.type === 'payment')
-                              .reduce((sum, record) => sum + record.amount, 0))
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Qolgan Qarz</p>
-                    <p className={`font-medium text-lg`}>
-                      {(() => {
-                        const history = getClientHistory(selectedClient.id);
-                        const debts = history.filter(record => record.type === 'debt').reduce((sum, record) => sum + record.amount, 0);
-                        const payments = history.filter(record => record.type === 'payment').reduce((sum, record) => sum + record.amount, 0);
-                        const remaining = selectedMonth === 'all'
-                            ? selectedClient.totalDebt - selectedClient.paidAmount
-                            : debts - payments;
-                        return (
-                            <span className={remaining > 0 ? 'text-red-600' : 'text-green-600'}>
-                            {formatCurrency(remaining)}
-                          </span>
-                        );
-                      })()}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              ) : clientHistory ? (
+                  <>
+                    {/* Client Summary - API'dan kelgan statistika */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-500">Jami Qarz</p>
+                          <p className="font-medium text-lg">
+                            {formatCurrency(clientHistory.statistics.total_debts)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">To'langan</p>
+                          <p className="font-medium text-lg text-green-600">
+                            {formatCurrency(clientHistory.statistics.total_payments)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Qolgan Qarz</p>
+                          <p className={`font-medium text-lg ${
+                              clientHistory.statistics.remaining_debt > 0 ? 'text-red-600' : 'text-green-600'
+                          }`}>
+                            {formatCurrency(clientHistory.statistics.remaining_debt)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-              {/* History List */}
-              <div className="overflow-y-auto max-h-96">
-                <div className="space-y-3">
-                  {getClientHistory(selectedClient.id).length > 0 ? (
-                      getClientHistory(selectedClient.id).map((record) => (
-                          <div key={record.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                              <div className={`p-2 rounded-full ${
-                                  record.type === 'payment' ? 'bg-green-100' : 'bg-orange-100'
-                              }`}>
-                                {record.type === 'payment' ? (
-                                    <DollarSign className={`w-4 h-4 ${
+                    {/* History List with Pagination */}
+                    <div className="overflow-y-auto max-h-72">
+                      <div className="space-y-3">
+                        {paginatedHistory.length > 0 ? (
+                            paginatedHistory.map((record) => (
+                                <div key={`${record.type}-${record.id}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center space-x-3">
+                                    <div className={`p-2 rounded-full ${
+                                        record.type === 'payment' ? 'bg-green-100' : 'bg-orange-100'
+                                    }`}>
+                                      {record.type === 'payment' ? (
+                                          <DollarSign className="w-4 h-4 text-green-600" />
+                                      ) : (
+                                          <CreditCard className="w-4 h-4 text-orange-600" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-gray-900">
+                                        {record.type === 'payment' ? "To'lov" : 'Qarz'}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                        {record.description || (record.type === 'payment' ? "To'lov" : "Qarz qo'shildi")}
+                                      </p>
+                                      <p className="text-xs text-gray-400">
+                                        {new Date(record.date).toLocaleDateString('uz-UZ', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className={`font-medium ${
                                         record.type === 'payment' ? 'text-green-600' : 'text-orange-600'
-                                    }`} />
-                                ) : (
-                                    <CreditCard className="w-4 h-4 text-orange-600" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {record.type === 'payment' ? 'To\'lov' : 'Qarz'}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {record.description || (record.type === 'payment' ? 'To\'lov' : 'Qarz qo\'shildi')}
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                  {new Date(record.date).toLocaleDateString('uz-UZ', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className={`font-medium ${
-                                  record.type === 'payment' ? 'text-green-600' : 'text-orange-600'
-                              }`}>
-                                {record.type === 'payment' ? '-' : '+'}{formatCurrency(record.amount)}
+                                    }`}>
+                                      {record.type === 'payment' ? '-' : '+'}{formatCurrency(record.amount)}
+                                    </p>
+                                  </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-8">
+                              <History className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                              <p className="text-gray-500">
+                                {selectedMonth === 'all' ? 'Tarix mavjud emas' : 'Bu oyda tarix mavjud emas'}
                               </p>
                             </div>
-                          </div>
-                      ))
-                  ) : (
-                      <div className="text-center py-8">
-                        <History className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500">
-                          {selectedMonth === 'all' ? 'Tarix mavjud emas' : 'Bu oyda tarix mavjud emas'}
-                        </p>
+                        )}
                       </div>
-                  )}
-                </div>
-              </div>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                          <p className="text-sm text-gray-500">
+                            {clientHistory.history.length} ta yozuvdan {((currentPage - 1) * itemsPerPage) + 1}-
+                            {Math.min(currentPage * itemsPerPage, clientHistory.history.length)} ko'rsatilmoqda
+                          </p>
+                          <div className="flex space-x-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1 text-sm border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                            >
+                              Oldingi
+                            </button>
+                            <span className="px-3 py-1 text-sm">
+                    {currentPage} / {totalPages}
+                  </span>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1 text-sm border rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                            >
+                              Keyingi
+                            </button>
+                          </div>
+                        </div>
+                    )}
+                  </>
+              ) : null}
             </div>
           </div>
       )}
