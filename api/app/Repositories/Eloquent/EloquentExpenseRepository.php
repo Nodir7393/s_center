@@ -7,7 +7,7 @@ use App\Repositories\Contracts\ExpenseRepository;
 
 class EloquentExpenseRepository implements ExpenseRepository
 {
-    public function paginate(?string $month, int $perPage = 20)
+    public function paginate(?string $month, int $perPage = 100)
     {
         $q = Expense::query()->latest('date');
         if ($month) $q->whereRaw("to_char(date, 'YYYY-MM') = ?", [$month]); // PG
