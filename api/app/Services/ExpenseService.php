@@ -9,7 +9,7 @@ class ExpenseService
 {
     public function __construct(private ExpenseRepository $repo) {}
 
-    public function list(?string $month, int $perPage = 20)
+    public function list(?string $month, int $perPage = 100)
     {
         return $this->repo->paginate($month, $perPage);
     }
